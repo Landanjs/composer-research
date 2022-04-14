@@ -14,6 +14,7 @@ from composer.loss import soft_cross_entropy
 from composer.metrics import CrossEntropy, MIoU
 from composer.models.base import ComposerModel
 from composer.models.initializers import Initializer
+import monai
 
 __all__ = ["deeplabv3_builder", "ComposerDeepLabV3"]
 
@@ -198,6 +199,9 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_miou = MIoU(self.num_classes, ignore_index=-1)
         self.val_ce = CrossEntropy(ignore_index=-1)
 
+        #self.bce_loss = torch.nn.BCELoss()
+        self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True)
+
     def forward(self, batch: BatchPair):
         x = batch[0]
         logits = self.model(x)
@@ -205,8 +209,11 @@ class ComposerDeepLabV3(ComposerModel):
 
     def loss(self, outputs: Any, batch: BatchPair):
         target = batch[1]
-        loss = soft_cross_entropy(outputs, target,
-                                  ignore_index=-1)  # type: ignore
+        #target = F.one_hot(target, num_classes=151)
+        #outputs = F.sigmoid(outputs)
+        #loss = self.bce_loss(outputs, target)
+        loss = self.focal_loss(outputs, target)
+
         return loss
 
     def metrics(self, train: bool = False):
