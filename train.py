@@ -26,7 +26,7 @@ def main() -> None:
     if len(sys.argv) == 1:
         sys.argv = [sys.argv[0], "--help"]
 
-    TrainerHparams.register_class(field='deeplabv3',
+    TrainerHparams.register_class(field='model',
                                   register_class=DeepLabV3Hparams,
                                   class_key='my_deeplabv3')
     hparams = TrainerHparams.create(
