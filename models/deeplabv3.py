@@ -180,7 +180,14 @@ class ComposerDeepLabV3(ComposerModel):
                  backbone_url: str = '',
                  sync_bn: bool = True,
                  use_plus: bool = True,
-                 initializers: List[Initializer] = []):
+                 initializers: List[Initializer] = [],
+                 sigmoid=False,
+                 softmax=False,
+                 jaccard=False,
+                 gamma=0.0,
+                 focal_weight=None,
+                 lambda_dice=0.0,
+                 lambda_focal=1.0):
 
         super().__init__()
         self.num_classes = num_classes
@@ -200,14 +207,14 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_ce = CrossEntropy(ignore_index=-1)
 
         self.loss_func = monai.losses.DiceFocalLoss(to_onehot_y=True,
-                                                    sigmoid=False,
-                                                    softmax=False,
-                                                    jaccard=False,
+                                                    sigmoid=sigmoid,
+                                                    softmax=softmax,
+                                                    jaccard=jaccard,
                                                     batch=True,
-                                                    gamma=0.0,
-                                                    focal_weight=None,
-                                                    lambda_dice=0.0,
-                                                    lambda_focal=1.0)
+                                                    gamma=gamma,
+                                                    focal_weight=focal_weight,
+                                                    lambda_dice=lambda_dice,
+                                                    lambda_focal=lambda_focal)
 
     def forward(self, batch: BatchPair):
         x = batch[0]
@@ -231,5 +238,4 @@ class ComposerDeepLabV3(ComposerModel):
         assert self.training is False, "For validation, model must be in eval mode"
         target = batch[1]
         logits = self.forward(batch)
-        #logits = logits[:, 1:]  # remove background class
         return logits, target

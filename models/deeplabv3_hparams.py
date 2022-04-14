@@ -41,6 +41,14 @@ class DeepLabV3Hparams(ModelHparams):
         "If true, use SyncBatchNorm to sync batch norm statistics across GPUs.",
         default=True)
 
+    sigmoid: bool = hp.optional("blank", default=False)
+    softmax: bool = hp.optional("blank", default=False)
+    jaccard: bool = hp.optional("blank", default=False)
+    gamma: float = hp.optional("blank", default=0.0)
+    focal_weight: float = hp.optional("blank", default=None)
+    lambda_dice: float = hp.optional("blank", default=0.0)
+    lambda_focal: float = hp.optional("blank", default=1.0)
+
     def validate(self):
         if self.num_classes is None:
             raise ValueError("num_classes must be specified")
@@ -63,4 +71,11 @@ class DeepLabV3Hparams(ModelHparams):
             backbone_url=self.backbone_url,
             use_plus=self.use_plus,
             sync_bn=self.sync_bn,
-            initializers=self.initializers)
+            initializers=self.initializers,
+            sigmoid=self.sigmoid,
+            softmax=self.softmax,
+            jaccard=self.jaccard,
+            gamma=self.gamma,
+            focal_weight=self.focal_weight,
+            lambda_dice=self.lambda_dice,
+            lambda_focal=self.lambda_focal)
