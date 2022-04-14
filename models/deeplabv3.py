@@ -199,8 +199,15 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_miou = MIoU(self.num_classes, ignore_index=-1)
         self.val_ce = CrossEntropy(ignore_index=-1)
 
-        #self.bce_loss = torch.nn.BCELoss()
-        self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True)
+        self.loss_func = monai.losses.DiceFocalLoss(to_onehot_y=True,
+                                                    sigmoid=False,
+                                                    softmax=False,
+                                                    jaccard=False,
+                                                    batch=True,
+                                                    gamma=0.0,
+                                                    focal_weight=None,
+                                                    lambda_dice=0.0,
+                                                    lambda_focal=1.0)
 
     def forward(self, batch: BatchPair):
         x = batch[0]
@@ -209,12 +216,9 @@ class ComposerDeepLabV3(ComposerModel):
 
     def loss(self, outputs: Any, batch: BatchPair):
         target = batch[1]
-        #target = F.one_hot(target, num_classes=151)
-        #outputs = F.sigmoid(outputs)
-        #loss = self.bce_loss(outputs, target)
         target = target[target != -1]
         outputs = outputs[target != -1]
-        loss = self.focal_loss(outputs, target)
+        loss = self.loss_func(target, outputs)
 
         return loss
 
