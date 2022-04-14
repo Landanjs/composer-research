@@ -196,8 +196,8 @@ class ComposerDeepLabV3(ComposerModel):
         # Metrics
         self.train_miou = MIoU(self.num_classes, ignore_index=-1)
         self.train_ce = CrossEntropy(ignore_index=-1)
-        self.val_miou = MIoU(self.num_classes, ignore_index=-1)
-        self.val_ce = CrossEntropy(ignore_index=-1)
+        self.val_miou = MIoU(self.num_classes, ignore_index=0)
+        self.val_ce = CrossEntropy(ignore_index=0)
 
         #self.bce_loss = torch.nn.BCELoss()
         self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True)
@@ -225,4 +225,5 @@ class ComposerDeepLabV3(ComposerModel):
         assert self.training is False, "For validation, model must be in eval mode"
         target = batch[1]
         logits = self.forward(batch)
+        logits = logits[:, 1:]  # remove background class
         return logits, target
