@@ -42,7 +42,7 @@ class DeepLabV3Hparams(ModelHparams):
     sync_bn: bool = hp.optional(
         "If true, use SyncBatchNorm to sync batch norm statistics across GPUs.",
         default=True)
-
+    pixelwise_loss: str = hp.optional("blank", default='ce')
     sigmoid: bool = hp.optional("blank", default=False)
     softmax: bool = hp.optional("blank", default=False)
     jaccard: bool = hp.optional("blank", default=False)
@@ -74,6 +74,7 @@ class DeepLabV3Hparams(ModelHparams):
             use_plus=self.use_plus,
             sync_bn=self.sync_bn,
             initializers=self.initializers,
+            pixelwise_loss=self.pixelwise_loss,
             sigmoid=self.sigmoid,
             softmax=self.softmax,
             jaccard=self.jaccard,

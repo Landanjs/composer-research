@@ -182,6 +182,7 @@ class ComposerDeepLabV3(ComposerModel):
                  sync_bn: bool = True,
                  use_plus: bool = True,
                  initializers: List[Initializer] = [],
+                 pixelwise_loss: str = 'ce',
                  sigmoid=False,
                  softmax=False,
                  jaccard=False,
@@ -192,6 +193,7 @@ class ComposerDeepLabV3(ComposerModel):
 
         super().__init__()
         self.num_classes = num_classes
+        self.pixelwise_loss = pixelwise_loss
         self.model = deeplabv3_builder(
             backbone_arch=backbone_arch,
             is_backbone_pretrained=is_backbone_pretrained,
@@ -208,12 +210,17 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_ce = CrossEntropy(ignore_index=-1)
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
-        #self.dice_loss = monai.losses.DiceLoss(to_onehot_y=True,
-                                                #sigmoid=sigmoid,
-                                                #softmax=softmax,
-                                                #jaccard=jaccard,
-                                                # batch=True)
-        self.focal_loss = monai.losses.FocalLoss(include_background=False, to_onehot_y=True, gamma=gamma, weight=focal_weight, reduction="none")
+        self.dice_loss = monai.losses.DiceLoss(included_background=False,
+                                               to_onehot_y=True,
+                                               sigmoid=sigmoid,
+                                               softmax=softmax,
+                                               jaccard=jaccard,
+                                               batch=True)
+        self.focal_loss = monai.losses.FocalLoss(include_background=False,
+                                                 to_onehot_y=True,
+                                                 gamma=gamma,
+                                                 weight=focal_weight,
+                                                 reduction="none")
 
     def forward(self, batch: BatchPair):
         x = batch[0]
@@ -222,12 +229,19 @@ class ComposerDeepLabV3(ComposerModel):
 
     def loss(self, outputs: Any, batch: BatchPair):
         target = batch[1]
+        loss = 0
         if self.lambda_dice:
-            pass
+            loss += self.dice_loss(outputs,
+                                   target.unsqueeze(1)) * self.lambda_dice
         if self.lambda_focal:
-            loss = self.focal_loss(outputs, target.unsqueeze(1))
-            loss = loss.sum(1)
-            loss = loss[target != 0].mean() * self.lambda_focal
+            if self.pixelwise_loss == 'ce':
+                loss += soft_cross_entropy(outputs[:, 1:],
+                                           target - 1,
+                                           ignore_index=-1) * self.lambda_focal
+            elif self.pixelwise_loss == 'bce':
+                focal_loss = self.focal_loss(outputs, target.unsqueeze(1))
+                focal_loss = focal_loss.sum(1)
+                loss += focal_loss[target != 0].mean() * self.lambda_focal
 
         return loss
 
