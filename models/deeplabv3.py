@@ -139,7 +139,8 @@ def deeplabv3_builder(num_classes: int,
                 model.classifier.apply(initializer_fn)
             else:
                 model.apply(initializer_fn)
-
+    torch.nn.init.constant_(model.classifier.conv_seg.bias, -2.17609125906)
+    #model.classifier.conv_seg.bias = torch.ones_like(model.classifier.conv_seg.bias) * (-2.17609125906)
     if sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
@@ -203,18 +204,16 @@ class ComposerDeepLabV3(ComposerModel):
         # Metrics
         self.train_miou = MIoU(self.num_classes, ignore_index=-1)
         self.train_ce = CrossEntropy(ignore_index=-1)
-        self.val_miou = MIoU(self.num_classes, ignore_index=-1)
+        self.val_miou = MIoU(self.num_classes - 1, ignore_index=-1)
         self.val_ce = CrossEntropy(ignore_index=-1)
-
-        self.loss_func = monai.losses.DiceFocalLoss(to_onehot_y=True,
-                                                    sigmoid=sigmoid,
-                                                    softmax=softmax,
-                                                    jaccard=jaccard,
-                                                    batch=True,
-                                                    gamma=gamma,
-                                                    focal_weight=focal_weight,
-                                                    lambda_dice=lambda_dice,
-                                                    lambda_focal=lambda_focal)
+        self.lambda_dice = lambda_dice
+        self.lambda_focal = lambda_focal
+        #self.dice_loss = monai.losses.DiceLoss(to_onehot_y=True,
+                                                #sigmoid=sigmoid,
+                                                #softmax=softmax,
+                                                #jaccard=jaccard,
+                                                # batch=True)
+        self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True, gamma=0, weight=focal_weight, reduction="none")
 
     def forward(self, batch: BatchPair):
         x = batch[0]
@@ -223,9 +222,15 @@ class ComposerDeepLabV3(ComposerModel):
 
     def loss(self, outputs: Any, batch: BatchPair):
         target = batch[1]
-        target = target[target != -1]
-        outputs = outputs[target != -1]
-        loss = self.loss_func(target, outputs)
+        #target = target[target != -1]
+        #outputs = outputs[target != -1]
+        #outputs = outputs.permute(1, 0, 2, 3)[:, target != -1].unsqueeze(0)
+        #target = target[target != -1].unsqueeze(0)
+        if self.lambda_dice:
+            pass
+        if self.lambda_focal:
+            loss = self.lambda_focal * self.focal_loss(outputs, target.unsqueeze(1))
+            loss = loss.sum(1).mean()
 
         return loss
 
@@ -238,4 +243,6 @@ class ComposerDeepLabV3(ComposerModel):
         assert self.training is False, "For validation, model must be in eval mode"
         target = batch[1]
         logits = self.forward(batch)
+        logits = logits[:, 1:]
+        target -= 1
         return logits, target
