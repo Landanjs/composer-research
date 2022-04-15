@@ -213,7 +213,7 @@ class ComposerDeepLabV3(ComposerModel):
                                                 #softmax=softmax,
                                                 #jaccard=jaccard,
                                                 # batch=True)
-        self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True, gamma=0, weight=focal_weight, reduction="none")
+        self.focal_loss = monai.losses.FocalLoss(to_onehot_y=True, gamma=gamma, weight=focal_weight, reduction="none")
 
     def forward(self, batch: BatchPair):
         x = batch[0]
