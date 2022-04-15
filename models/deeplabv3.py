@@ -210,7 +210,7 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_ce = CrossEntropy(ignore_index=-1)
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
-        self.dice_loss = monai.losses.DiceLoss(included_background=False,
+        self.dice_loss = monai.losses.DiceLoss(include_background=False,
                                                to_onehot_y=True,
                                                sigmoid=sigmoid,
                                                softmax=softmax,
