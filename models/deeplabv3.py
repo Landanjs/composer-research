@@ -227,7 +227,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_focal:
             loss = self.focal_loss(outputs, target.unsqueeze(1))
             loss = loss.sum(1)
-            loss = loss[target != -1].mean() * self.lambda_focal
+            loss = loss[target != 0].mean() * self.lambda_focal
 
         return loss
 
