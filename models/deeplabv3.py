@@ -222,15 +222,12 @@ class ComposerDeepLabV3(ComposerModel):
 
     def loss(self, outputs: Any, batch: BatchPair):
         target = batch[1]
-        #target = target[target != -1]
-        #outputs = outputs[target != -1]
-        #outputs = outputs.permute(1, 0, 2, 3)[:, target != -1].unsqueeze(0)
-        #target = target[target != -1].unsqueeze(0)
         if self.lambda_dice:
             pass
         if self.lambda_focal:
-            loss = self.lambda_focal * self.focal_loss(outputs, target.unsqueeze(1))
-            loss = loss.sum(1).mean()
+            loss = self.focal_loss(outputs, target.unsqueeze(1))
+            loss = loss.sum(1)
+            loss = loss[target != -1].mean() * self.lambda_focal
 
         return loss
 
