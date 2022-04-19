@@ -215,7 +215,6 @@ class ComposerDeepLabV3(ComposerModel):
             to_onehot_y=True,
             sigmoid=sigmoid,
             softmax=softmax,
-            jaccard=jaccard,
             batch=True)
         self.focal_loss = monai.losses.FocalLoss(include_background=False,
                                                  to_onehot_y=True,
