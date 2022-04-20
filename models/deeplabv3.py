@@ -186,6 +186,7 @@ class ComposerDeepLabV3(ComposerModel):
                  sigmoid=False,
                  softmax=False,
                  jaccard=False,
+                 batch=False,
                  gamma=0.0,
                  focal_weight=None,
                  lambda_dice=0.0,
@@ -215,7 +216,7 @@ class ComposerDeepLabV3(ComposerModel):
                                                sigmoid=sigmoid,
                                                softmax=softmax,
                                                jaccard=jaccard,
-                                               batch=True)
+                                               batch=batch)
         self.focal_loss = monai.losses.FocalLoss(include_background=False,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
