@@ -215,7 +215,6 @@ class ComposerDeepLabV3(ComposerModel):
                                                   to_onehot_y=True,
                                                   sigmoid=sigmoid,
                                                   softmax=softmax,
-                                                  jaccard=jaccard,
                                                   alpha=0.3,
                                                   beta=0.7,
                                                   batch=True)
