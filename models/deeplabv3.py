@@ -239,7 +239,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             dice_loss = self.dice_loss(outputs,
                                        target.unsqueeze(1)) * self.lambda_dice
-            print(dice_loss.shape)
+            print(dice_loss.view(-1))
             loss += dice_loss.pow(1 / self.gamma).mean()
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
