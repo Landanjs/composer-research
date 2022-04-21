@@ -247,7 +247,7 @@ class ComposerDeepLabV3(ComposerModel):
                                                   (w - 1) + len(dice_loss))
             print(norm_factor)
             dice_loss[mask] *= (1 / len(dice_loss)) * norm_factor
-            dice_loss[mask] *= (1 / (w * len(dice_loss))) * norm_factor
+            dice_loss[~mask] *= (1 / (w * len(dice_loss))) * norm_factor
             print(dice_loss)
             loss += dice_loss.sum() * self.lambda_dice
             #loss += dice_loss.pow(1 / self.gamma).mean() * self.lambda_dice
