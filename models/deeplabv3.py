@@ -237,10 +237,9 @@ class ComposerDeepLabV3(ComposerModel):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
-            dice_loss = self.dice_loss(outputs,
-                                       target.unsqueeze(1)) * self.lambda_dice
-            print(dice_loss.view(-1))
-            loss += dice_loss.pow(1 / self.gamma).mean()
+            dice_loss = self.dice_loss(outputs, target.unsqueeze(1))
+            print(torch.unique(target, return_counts=True), dice_loss.view(-1))
+            loss += dice_loss.pow(1 / self.gamma).mean() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs,
