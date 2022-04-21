@@ -211,6 +211,7 @@ class ComposerDeepLabV3(ComposerModel):
         self.val_ce = CrossEntropy(ignore_index=-1)
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
+        self.gamma = gamma
         self.dice_loss = monai.losses.DiceLoss(include_background=False,
                                                to_onehot_y=True,
                                                sigmoid=sigmoid,
@@ -236,15 +237,14 @@ class ComposerDeepLabV3(ComposerModel):
                                    target.unsqueeze(1)) * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
-                gamma_1 = 0
                 confidences = F.softmax(outputs, dim=1).gather(
                     dim=1, index=target.unsqueeze(1))
                 ce_loss = soft_cross_entropy(outputs,
                                              target,
                                              ignore_index=0,
                                              reduction='none')
-                loss += (
-                    1 - confidences).pow(gamma_1) * ce_loss * self.lambda_focal
+                loss += (1 - confidences).pow(
+                    self.gamma) * ce_loss * self.lambda_focal
             elif self.pixelwise_loss == 'bce':
                 focal_loss = self.focal_loss(outputs, target.unsqueeze(1))
                 focal_loss = focal_loss.sum(1)
