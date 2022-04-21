@@ -43,7 +43,8 @@ def deeplabv3_builder(num_classes: int,
                       backbone_url: str = '',
                       sync_bn: bool = True,
                       use_plus: bool = True,
-                      initializers: List[Initializer] = []):
+                      initializers: List[Initializer] = [],
+                      loss: str = 'ce'):
     """Helper function to build a torchvision DeepLabV3 model with a 3x3 convolution layer and dropout removed.
 
     Args:
@@ -139,7 +140,8 @@ def deeplabv3_builder(num_classes: int,
                 model.classifier.apply(initializer_fn)
             else:
                 model.apply(initializer_fn)
-    torch.nn.init.constant_(model.classifier.conv_seg.bias, -2.17609125906)
+    if loss == 'bce':
+        torch.nn.init.constant_(model.classifier.conv_seg.bias, -2.17609125906)
     #model.classifier.conv_seg.bias = torch.ones_like(model.classifier.conv_seg.bias) * (-2.17609125906)
     if sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -202,7 +204,8 @@ class ComposerDeepLabV3(ComposerModel):
             use_plus=use_plus,
             num_classes=num_classes,
             sync_bn=sync_bn,
-            initializers=initializers)
+            initializers=initializers,
+            loss=self.pixelwise_loss)
 
         # Metrics
         self.train_miou = MIoU(self.num_classes, ignore_index=-1)
@@ -237,16 +240,18 @@ class ComposerDeepLabV3(ComposerModel):
                                    target.unsqueeze(1)) * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
-                #print(outputs.shape, target.shape)
-                confidences = F.softmax(outputs, dim=1).gather(
-                    dim=1, index=target.unsqueeze(1)).squeeze(1)
                 ce_loss = soft_cross_entropy(outputs,
                                              target,
                                              ignore_index=0,
                                              reduction='none')
-                #print(confidences.shape, ce_loss.shape)
-                loss += ((1 - confidences).pow(self.gamma) *
-                         ce_loss)[target != 0].mean() * self.lambda_focal
+                if self.gamma > 0:
+                    confidences = F.softmax(outputs, dim=1).gather(
+                        dim=1, index=target.unsqueeze(1)).squeeze(1)
+
+                    loss += ((1 - confidences).pow(self.gamma) *
+                             ce_loss)[target != 0].mean() * self.lambda_focal
+                else:
+                    loss += ce_loss[target != 0].mean() * self.lambda_focal
             elif self.pixelwise_loss == 'bce':
                 focal_loss = self.focal_loss(outputs, target.unsqueeze(1))
                 focal_loss = focal_loss.sum(1)
