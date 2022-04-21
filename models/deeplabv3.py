@@ -245,10 +245,8 @@ class ComposerDeepLabV3(ComposerModel):
             mask[c_present] = True
             norm_factor = (w * len(dice_loss)) / (len(c_present) *
                                                   (w - 1) + len(dice_loss))
-            print(norm_factor)
             dice_loss[mask] *= (1 / len(dice_loss)) * norm_factor
             dice_loss[~mask] *= (1 / (w * len(dice_loss))) * norm_factor
-            print(dice_loss)
             loss += dice_loss.sum() * self.lambda_dice
             #loss += dice_loss.pow(1 / self.gamma).mean() * self.lambda_dice
         if self.lambda_focal:
