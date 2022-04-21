@@ -236,8 +236,15 @@ class ComposerDeepLabV3(ComposerModel):
                                    target.unsqueeze(1)) * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
-                loss += soft_cross_entropy(outputs, target,
-                                           ignore_index=0) * self.lambda_focal
+                gamma_1 = 0
+                confidences = F.softmax(outputs, dim=1).gather(
+                    dim=1, index=target.unsqueeze(1))
+                ce_loss = soft_cross_entropy(outputs,
+                                             target,
+                                             ignore_index=0,
+                                             reduction='none')
+                loss += (
+                    1 - confidences).pow(gamma_1) * ce_loss * self.lambda_focal
             elif self.pixelwise_loss == 'bce':
                 focal_loss = self.focal_loss(outputs, target.unsqueeze(1))
                 focal_loss = focal_loss.sum(1)
