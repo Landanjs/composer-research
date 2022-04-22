@@ -237,7 +237,7 @@ class ComposerDeepLabV3(ComposerModel):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
-            w = 10
+            w = 5
             dice_loss = self.dice_loss(outputs, target.unsqueeze(1))
             c_present, _ = torch.unique(target - 1, return_counts=True)
             c_present = c_present[c_present != -1]  # remove background class
