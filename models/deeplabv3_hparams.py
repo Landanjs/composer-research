@@ -47,6 +47,7 @@ class DeepLabV3Hparams(ModelHparams):
     softmax: bool = hp.optional("blank", default=False)
     jaccard: bool = hp.optional("blank", default=False)
     batch: bool = hp.optional("blank", default=False)
+    no_class_weight: float = hp.optional("blank", default=1.0)
     gamma: float = hp.optional("blank", default=0.0)
     focal_weight: Optional[float] = hp.optional("blank", default=None)
     lambda_dice: float = hp.optional("blank", default=0.0)
@@ -80,6 +81,7 @@ class DeepLabV3Hparams(ModelHparams):
             softmax=self.softmax,
             jaccard=self.jaccard,
             batch=self.batch,
+            no_class_weight=self.no_class_weight,
             gamma=self.gamma,
             focal_weight=self.focal_weight,
             lambda_dice=self.lambda_dice,

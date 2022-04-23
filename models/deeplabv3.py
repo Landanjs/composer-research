@@ -189,6 +189,7 @@ class ComposerDeepLabV3(ComposerModel):
                  softmax=False,
                  jaccard=False,
                  batch=False,
+                 no_class_weight=1.0,
                  gamma=0.0,
                  focal_weight=None,
                  lambda_dice=0.0,
@@ -197,6 +198,7 @@ class ComposerDeepLabV3(ComposerModel):
         super().__init__()
         self.num_classes = num_classes
         self.pixelwise_loss = pixelwise_loss
+        self.no_class_weight = no_class_weight
         self.model = deeplabv3_builder(
             backbone_arch=backbone_arch,
             is_backbone_pretrained=is_backbone_pretrained,
@@ -237,21 +239,17 @@ class ComposerDeepLabV3(ComposerModel):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
-            w = 10
             dice_loss = self.dice_loss(outputs, target.unsqueeze(1)).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             c_present, _ = torch.unique(target - 1, return_counts=True)
             c_present = c_present[c_present != -1]  # remove background class
+            mask = torch.zeros(len(dice_loss), dtype=torch.bool)
+            mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
-            weights[c_present] = 1
+            weights[mask] = 1
+            weights[~mask] = 1 / self.no_class_weight
             weights /= weights.sum()
-            #mask[c_present] = True
-            #norm_factor = (w * len(dice_loss)) / (len(c_present) *
-            #                                      (w - 1) + len(dice_loss))
-            #dice_loss[mask] *= (1 / len(dice_loss)) * norm_factor
-            #dice_loss[~mask] *= (1 / (w * len(dice_loss))) * norm_factor
             loss += (dice_loss * weights).sum() * self.lambda_dice
-            #loss += dice_loss.sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs,
