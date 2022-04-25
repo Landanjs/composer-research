@@ -247,7 +247,7 @@ class ComposerDeepLabV3(ComposerModel):
             mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
             weights[mask] = 1
-            weights[~mask] = 1 / self.no_class_weight
+            weights[~mask] = 0
             weights /= weights.sum()
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
