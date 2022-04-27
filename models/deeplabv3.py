@@ -213,12 +213,12 @@ class ComposerDeepLabV3(ComposerModel):
         # Metrics
         self.train_miou = MIoU(self.num_classes, ignore_index=-1)
         self.train_ce = CrossEntropy(ignore_index=-1)
-        self.val_miou = MIoU(self.num_classes - 1, ignore_index=-1)
+        self.val_miou = MIoU(self.num_classes, ignore_index=-1)
         self.val_ce = CrossEntropy(ignore_index=-1)
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
         self.gamma = gamma
-        self.dice_loss = monai.losses.DiceLoss(include_background=False,
+        self.dice_loss = monai.losses.DiceLoss(include_background=True,
                                                to_onehot_y=True,
                                                sigmoid=sigmoid,
                                                softmax=softmax,
@@ -226,7 +226,7 @@ class ComposerDeepLabV3(ComposerModel):
                                                batch=batch,
                                                squared_pred=squared_pred,
                                                reduction='none')
-        self.focal_loss = monai.losses.FocalLoss(include_background=False,
+        self.focal_loss = monai.losses.FocalLoss(include_background=True,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
                                                  weight=focal_weight,
@@ -243,7 +243,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             dice_loss = self.dice_loss(outputs, target.unsqueeze(1)).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            c_present, _ = torch.unique(target - 1, return_counts=True)
+            c_present, _ = torch.unique(target, return_counts=True)
             c_present = c_present[c_present != -1]  # remove background class
             mask = torch.zeros(len(dice_loss), dtype=torch.bool)
             mask[c_present] = True
@@ -256,7 +256,7 @@ class ComposerDeepLabV3(ComposerModel):
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs,
                                              target,
-                                             ignore_index=0,
+                                             ignore_index=-1,
                                              reduction='none')
                 if False:
                     confidences = F.softmax(outputs, dim=1).gather(
@@ -282,6 +282,4 @@ class ComposerDeepLabV3(ComposerModel):
         assert self.training is False, "For validation, model must be in eval mode"
         target = batch[1]
         logits = self.forward(batch)
-        logits = logits[:, 1:]
-        target -= 1
         return logits, target
