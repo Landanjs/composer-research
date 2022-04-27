@@ -438,7 +438,10 @@ class DiceLoss(_Loss):
         ground_o = torch.sum(target, dim=reduce_axis)
         pred_o = torch.sum(input, dim=reduce_axis)
 
-        denominator = ground_o + pred_o
+        denominator = ground_o + (pred_o * (ground_o != 0))
+
+        intersection = torch.sum(intersection, dim=0)  # reduce across batch
+        denominator = torch.sum(denominator, dim=0)  # reduce across batch
 
         if self.jaccard:
             denominator = 2.0 * (denominator - intersection)
