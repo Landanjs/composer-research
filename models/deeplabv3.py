@@ -244,7 +244,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, target.unsqueeze(1)).view(-1)
+            dice_loss = self.dice_loss(outputs, one_hot_targets[1:]).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             c_present, _ = torch.unique(target, return_counts=True)
             c_present = c_present[c_present != -1]  # remove background class
