@@ -253,7 +253,7 @@ class ComposerDeepLabV3(ComposerModel):
             #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
             #mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
-            weights[c_present] = counts
+            weights[c_present] = counts.float()
 
             #weights[mask] = 1
             #weights[~mask] = 0
