@@ -224,14 +224,14 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
         self.gamma = gamma
-        self.dice_loss = monai.losses.DiceLoss(include_background=True,
-                                               to_onehot_y=False,
-                                               sigmoid=sigmoid,
-                                               softmax=softmax,
-                                               jaccard=jaccard,
-                                               batch=batch,
-                                               squared_pred=squared_pred,
-                                               reduction='none')
+        self.dice_loss = DiceLoss(include_background=True,
+                                  to_onehot_y=False,
+                                  sigmoid=sigmoid,
+                                  softmax=softmax,
+                                  jaccard=jaccard,
+                                  batch=batch,
+                                  squared_pred=squared_pred,
+                                  reduction='none')
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
