@@ -249,16 +249,16 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets[:,
-                                                                1:]).view(-1)
+            dice_loss, class_counts = self.dice_loss(
+                outputs, one_hot_targets[:, 1:]).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            c_present, _ = torch.unique(target, return_counts=True)
-            c_present = c_present[c_present != -1]  # remove background class
-            mask = torch.zeros(len(dice_loss), dtype=torch.bool)
-            mask[c_present] = True
+            #c_present, _ = torch.unique(target, return_counts=True)
+            #c_present = c_present[c_present != -1]  # remove background class
+            #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
+            #mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
-            weights[mask] = 1
-            weights[~mask] = 0
+            weights[class_counts != 0] = 1
+            #weights[~mask] = 0
             weights /= weights.sum()
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
@@ -438,6 +438,8 @@ class DiceLoss(_Loss):
 
         ground_o = torch.sum(target, dim=reduce_axis)
         pred_o = torch.sum(input, dim=reduce_axis)
+        dist.all_reduce(ground_o)
+        dist.all_reduce(pred_o)
 
         denominator = ground_o + pred_o
 
@@ -446,7 +448,7 @@ class DiceLoss(_Loss):
 
         if self.batch:
             dist.all_reduce(intersection)
-            dist.all_reduce(denominator)
+            #dist.all_reduce(denominator)
 
         f: torch.Tensor = 1.0 - (2.0 * intersection + self.smooth_nr) / (
             denominator + self.smooth_dr)
@@ -465,4 +467,4 @@ class DiceLoss(_Loss):
                 f'Unsupported reduction: {self.reduction}, available options are ["mean", "sum", "none"].'
             )
 
-        return f
+        return f, ground_o
