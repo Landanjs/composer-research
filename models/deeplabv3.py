@@ -224,14 +224,14 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
         self.gamma = gamma
-        self.dice_loss = DiceLoss(include_background=True,
-                                  to_onehot_y=False,
-                                  sigmoid=sigmoid,
-                                  softmax=softmax,
-                                  jaccard=jaccard,
-                                  batch=batch,
-                                  squared_pred=squared_pred,
-                                  reduction='none')
+        self.dice_loss = monai.losses.DiceLoss(include_background=True,
+                                               to_onehot_y=False,
+                                               sigmoid=sigmoid,
+                                               softmax=softmax,
+                                               jaccard=jaccard,
+                                               batch=False,
+                                               squared_pred=squared_pred,
+                                               reduction='none')
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
@@ -249,23 +249,22 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss, class_counts = self.dice_loss(outputs,
-                                                     one_hot_targets[:, 1:])
-            dice_loss = dice_loss.view(-1).pow(1 / self.gamma)
-            #c_present, _ = torch.unique(target, return_counts=True)
-            #c_present = c_present[c_present != -1]  # remove background class
-            #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
-            #mask[c_present] = True
+            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:])
+            dice_loss = dice_loss.pow(1 / self.gamma)
+            c_present, counts = torch.unique(target.view(target.shape[0], -1),
+                                             return_counts=True,
+                                             dim=1)
+            c_present = c_present[c_present != -1]  # remove background class
+            mask = torch.zeros(len(dice_loss), dtype=torch.bool)
+            mask[c_present[counts != 0]] = True
             weights = torch.zeros_like(dice_loss)
-            weights[class_counts != 0] = 1
-            #weights[~mask] = 0
-            weights /= weights.sum()
-            loss += (dice_loss * weights).sum() * self.lambda_dice
+            weights[mask] = 1
+            weights[~mask] = 0
+            weights /= weights.sum(dim=1, keepdim=True)
+            loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
-                dist.all_reduce(ce_loss)
-                ce_loss /= 8
                 if False:
                     confidences = F.softmax(outputs, dim=1).gather(
                         dim=1, index=target.unsqueeze(1)).squeeze(1)
