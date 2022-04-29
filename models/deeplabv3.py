@@ -251,12 +251,11 @@ class ComposerDeepLabV3(ComposerModel):
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
             dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:])
             dice_loss = dice_loss.pow(1 / self.gamma)
-            c_present, counts = torch.unique(target.view(target.shape[0], -1),
-                                             return_counts=True,
-                                             dim=1)
-            c_present = c_present[c_present != -1]  # remove background class
-            mask = torch.zeros(len(dice_loss), dtype=torch.bool)
-            mask[c_present[counts != 0]] = True
+            mask = (one_hot_targets.sum(dim=[2, 3]) != 0)
+            #c_present, _ = torch.unique(target, return_counts=True)
+            #c_present = c_present[c_present != -1]  # remove background class
+            #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
+            #mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
             weights[mask] = 1
             weights[~mask] = 0
