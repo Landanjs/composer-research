@@ -261,8 +261,10 @@ class ComposerDeepLabV3(ComposerModel):
             weights[mask] = 1
             weights[~mask] = 0
             weights_sum = weights.sum(dim=1, keepdim=True)
+            print(weights_sum)
             weights[weights_sum.view(-1) > 0] /= weights_sum[
                 weights_sum.view(-1) > 0]
+            print(weights)
             loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
