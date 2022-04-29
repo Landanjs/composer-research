@@ -260,7 +260,9 @@ class ComposerDeepLabV3(ComposerModel):
             weights = torch.zeros_like(dice_loss)
             weights[mask] = 1
             weights[~mask] = 0
-            weights /= weights.sum(dim=1, keepdim=True)
+            weights_sum = weights.sum(dim=1, keepdim=True)
+            weights[weights_sum.view(-1) > 0] /= weights_sum[
+                weights_sum.view(-1) > 0]
             loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
