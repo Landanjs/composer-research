@@ -253,19 +253,19 @@ class ComposerDeepLabV3(ComposerModel):
                                                                 1:]).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             #mask = (one_hot_targets[:, 1:].sum(dim=[2, 3]) != 0)
-            #c_present, _ = torch.unique(target, return_counts=True)
-            #c_present = c_present[c_present != -1]  # remove background class
-            #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
-            #mask[c_present] = True
-            #weights = torch.zeros_like(dice_loss)
-            #weights[mask] = 1
-            #weights[~mask] = 0
+            c_present, _ = torch.unique(target, return_counts=True)
+            c_present = c_present[c_present != -1]  # remove background class
+            mask = torch.zeros(len(dice_loss), dtype=torch.bool)
+            mask[c_present] = True
+            weights = torch.zeros_like(dice_loss)
+            weights[mask] = 1
+            weights[~mask] = 0
             #weights_sum = weights.sum(dim=1, keepdim=True)
             #print(weights_sum)
             #weights[weights_sum.view(-1) > 0] /= weights_sum[
             #    weights_sum.view(-1) > 0]
             #print(weights)
-            loss += dice_loss.sum() * self.lambda_dice
+            loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
