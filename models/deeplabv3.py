@@ -260,15 +260,13 @@ class ComposerDeepLabV3(ComposerModel):
             weights = torch.zeros_like(dice_loss)
             weights[mask] = 1
             weights[~mask] = 0
-            weights_sum = weights.sum(
-                dim=1, keepdim=True
-            )  # Weight sum along classes (leaving only batch dimension)
+            # Weight sum along classes (leaving only batch dimension)
+            weights_sum = mask.float().sum(dim=1, keepdim=True)
             weights[weights_sum.view(-1) > 0] /= weights_sum[
                 weights_sum.view(-1) > 0]
             print(weights_sum)
-            weights_sum = weights.sum(
-                dim=0, keepdim=True
-            )  # Weight sum across samples (leaving only classes)
+            # Weight sum across samples (leaving only classes)
+            weights_sum = mask.float().sum(dim=0, keepdim=True)
             weights[:, weights_sum.view(-1) > 0] /= weights_sum[:,
                                                                 weights_sum.
                                                                 view(-1) > 0]
