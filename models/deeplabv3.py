@@ -273,7 +273,7 @@ class ComposerDeepLabV3(ComposerModel):
                                              ignore_index=-1,
                                              reduction='none')
                 ce_loss = (ce_loss.sum(dim=[1, 2]) /
-                           (target != -1).sum(dim=[1, 2])).mean()
+                           ((target != -1).sum(dim=[1, 2]) + 1e-5)).mean()
                 if False:
                     confidences = F.softmax(outputs, dim=1).gather(
                         dim=1, index=target.unsqueeze(1)).squeeze(1)
