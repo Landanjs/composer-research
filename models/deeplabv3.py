@@ -261,16 +261,18 @@ class ComposerDeepLabV3(ComposerModel):
             weights[mask] = 1
             weights[~mask] = 0
             # Weight sum along classes (leaving only batch dimension)
-            weights_sum = mask.float().sum(dim=1, keepdim=True)
-            weights[weights_sum.view(-1) > 0] /= weights_sum[
-                weights_sum.view(-1) > 0]
-            print(weights_sum)
+            #weights_sum = mask.float().sum(dim=1, keepdim=True)
+            #weights[weights_sum.view(-1) > 0] /= weights_sum[
+            #    weights_sum.view(-1) > 0]
+            #print(weights_sum)
             # Weight sum across samples (leaving only classes)
             weights_sum = mask.float().sum(dim=0, keepdim=True)
             weights[:, weights_sum.view(-1) > 0] /= weights_sum[:,
                                                                 weights_sum.
                                                                 view(-1) > 0]
             print(weights_sum)
+            weights /= (weights_sum > 0).sum()
+            print((weights_sum > 0).sum())
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
