@@ -269,8 +269,9 @@ class ComposerDeepLabV3(ComposerModel):
             weights_sum = weights.sum(
                 dim=0, keepdim=True
             )  # Weight sum across samples (leaving only classes)
-            weights[:, weights_sum.view(-1) > 0] /= weights_sum[
-                weights_sum.view(-1) > 0]
+            weights[:, weights_sum.view(-1) > 0] /= weights_sum[:,
+                                                                weights_sum.
+                                                                view(-1) > 0]
             print(weights_sum)
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
