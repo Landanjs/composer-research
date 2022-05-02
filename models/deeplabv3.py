@@ -229,7 +229,7 @@ class ComposerDeepLabV3(ComposerModel):
                                                sigmoid=sigmoid,
                                                softmax=softmax,
                                                jaccard=jaccard,
-                                               batch=False,
+                                               batch=True,
                                                squared_pred=squared_pred,
                                                reduction='none')
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
@@ -249,23 +249,23 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
-                outputs.shape[0], -1)
+            dice_loss = self.dice_loss(outputs, one_hot_targets[:,
+                                                                1:]).view(-1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            mask = (one_hot_targets[:, 1:].sum(dim=[2, 3]) != 0)
+            #mask = (one_hot_targets[:, 1:].sum(dim=[2, 3]) != 0)
             #c_present, _ = torch.unique(target, return_counts=True)
             #c_present = c_present[c_present != -1]  # remove background class
             #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
             #mask[c_present] = True
-            weights = torch.zeros_like(dice_loss)
-            weights[mask] = 1
-            weights[~mask] = 0
-            weights_sum = weights.sum(dim=1, keepdim=True)
-            print(weights_sum)
-            weights[weights_sum.view(-1) > 0] /= weights_sum[
-                weights_sum.view(-1) > 0]
-            print(weights)
-            loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
+            #weights = torch.zeros_like(dice_loss)
+            #weights[mask] = 1
+            #weights[~mask] = 0
+            #weights_sum = weights.sum(dim=1, keepdim=True)
+            #print(weights_sum)
+            #weights[weights_sum.view(-1) > 0] /= weights_sum[
+            #    weights_sum.view(-1) > 0]
+            #print(weights)
+            loss += dice_loss.sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
