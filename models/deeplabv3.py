@@ -261,10 +261,8 @@ class ComposerDeepLabV3(ComposerModel):
             weights[mask] = 1
             weights[~mask] = 0
             weights_sum = weights.sum(dim=1, keepdim=True)
-            print(weights_sum)
             weights[weights_sum.view(-1) > 0] /= weights_sum[
                 weights_sum.view(-1) > 0]
-            print(weights)
             loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
@@ -274,6 +272,7 @@ class ComposerDeepLabV3(ComposerModel):
                                              reduction='none')
                 ce_loss = (ce_loss.sum(dim=[1, 2]) /
                            ((target != -1).sum(dim=[1, 2]) + 1e-5)).mean()
+                print((target != -1).sum(dim=[1, 2]))
                 if False:
                     confidences = F.softmax(outputs, dim=1).gather(
                         dim=1, index=target.unsqueeze(1)).squeeze(1)
