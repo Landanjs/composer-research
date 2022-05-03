@@ -221,7 +221,7 @@ class ComposerDeepLabV3(ComposerModel):
         for b in range(target.shape[0]):
             for c in range(inv_class_count_per_batch.shape[1]):
                 if (target[b] == c).sum() > 0:
-                    class_loss[b, c] = loss[b, target[b] == c].mean()
+                    class_loss[b, c] += loss[b, target[b] == c].mean()
         class_loss = (
             class_loss *
             (class_count_per_batch > 0).sum(dim=0, keepdim=True)).sum(dim=0)
