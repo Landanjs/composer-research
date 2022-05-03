@@ -214,15 +214,21 @@ class ComposerDeepLabV3(ComposerModel):
                                                            1:].sum(dim=[2, 3])
         inv_class_count_per_batch = 1 / (
             class_count_per_batch *
-            (class_count_per_batch > 0).sum(dim=1, keepdim=True))
+            (class_count_per_batch > 0).sum(dim=0, keepdim=True))
         print(class_count_per_batch,
-              (class_count_per_batch > 0).sum(dim=1, keepdim=True))
+              (class_count_per_batch > 0).sum(dim=0, keepdim=True))
+        class_loss = torch.zeros_like(class_count_per_batch)
         for b in range(target.shape[0]):
             for c in range(inv_class_count_per_batch.shape[1]):
                 if (target[b] == c).sum() > 0:
-                    loss[b, target[b] == c] *= inv_class_count_per_batch[b, c]
-            loss[b, target[b] == -1] *= 0
-        return loss.sum(dim=[1, 2]).mean()
+                    class_loss[b, c] = loss[b, target[b] == c].mean()
+        class_loss = (
+            class_loss *
+            (class_count_per_batch > 0).sum(dim=0, keepdim=True)).sum(dim=0)
+
+        loss = (class_loss /
+                (class_count_per_batch.sum(dim=0) > 0).sum()).sum()
+        return loss
 
     def metrics(self, train: bool = False):
         metric_list = [self.train_miou, self.train_ce
