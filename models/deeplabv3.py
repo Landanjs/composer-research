@@ -233,7 +233,7 @@ class ComposerDeepLabV3(ComposerModel):
 
         is_batchwise = True
         if is_batchwise:
-            batch_class_mask = num_samples_per_class > 0
+            batch_class_mask = num_samples_per_class.view(-1) > 0
             class_loss = class_loss[:,
                                     batch_class_mask] / num_samples_per_class[
                                         batch_class_mask]
