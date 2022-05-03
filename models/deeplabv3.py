@@ -209,9 +209,8 @@ class ComposerDeepLabV3(ComposerModel):
                                   target,
                                   ignore_index=-1,
                                   reduction='none')  # type: ignore
-        class_count_per_batch = F.one_hot(target + 1,
-                                          num_classes=151)[:,
-                                                           1:].sum(dim=[1, 2])
+        class_count_per_batch = F.one_hot(
+            target + 1, num_classes=151)[:, 1:].sum(dim=[1, 2]).float()
         inv_class_count_per_batch = 1 / (
             class_count_per_batch *
             (class_count_per_batch > 0).sum(dim=0, keepdim=True))
