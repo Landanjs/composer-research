@@ -209,26 +209,37 @@ class ComposerDeepLabV3(ComposerModel):
                                   target,
                                   ignore_index=-1,
                                   reduction='none')  # type: ignore
+
+        # Calculate number of pixels for each class for each sample
         class_count_per_batch = F.one_hot(
             target + 1, num_classes=151)[:, 1:].sum(dim=[1, 2]).float()
-        inv_class_count_per_batch = 1 / (
-            class_count_per_batch *
-            (class_count_per_batch > 0).sum(dim=0, keepdim=True))
-        print(class_count_per_batch,
-              (class_count_per_batch > 0).sum(dim=0, keepdim=True))
+
+        # Get some statistics
+        class_mask = class_count_per_batch > 0
+        num_samples_per_class = class_mask.sum(dim=0, keepdim=True)
+        num_classes_per_batch = class_mask.sum(dim=1, keepdim=True)
+        print(
+            class_count_per_batch,
+            num_samples_per_class,
+            num_classes_per_batch,
+        )
+
+        # B x C matrix for losses
         class_loss = torch.zeros_like(class_count_per_batch)
         for b in range(target.shape[0]):
-            for c in range(inv_class_count_per_batch.shape[1]):
-                if (target[b] == c).sum() > 0:
-                    class_loss[b, c] += loss[b, target[b] == c].mean()
-        class_loss = (
-            class_loss *
-            (class_count_per_batch > 0).sum(dim=0, keepdim=True)).sum(dim=0)
-        batch_class_mask = class_count_per_batch.sum(dim=0) > 0
-        class_loss = class_loss[class_count_per_batch.sum(dim=0) > 0]
+            classes_in_batch = class_mask[b].nonzero().view(-1)
+            for c in classes_in_batch:
+                class_loss[b, c] += loss[b, target[b] == c].mean()
 
-        loss = (class_loss /
-                (class_count_per_batch.sum(dim=0) > 0).sum()).sum()
+        is_batchwise = True
+        if is_batchwise:
+            batch_class_mask = num_samples_per_class > 0
+            class_loss = class_loss[:,
+                                    batch_class_mask] / num_samples_per_class[
+                                        batch_class_mask]
+            loss = class_loss.sum(dim=0).mean()
+        else:
+            pass
         return loss
 
     def metrics(self, train: bool = False):
