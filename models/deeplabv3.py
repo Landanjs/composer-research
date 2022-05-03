@@ -212,7 +212,7 @@ class ComposerDeepLabV3(ComposerModel):
 
         # Calculate number of pixels for each class for each sample
         class_count_per_batch = F.one_hot(
-            target + 1, num_classes=151)[:, 1:].sum(dim=[1, 2]).float()
+            target + 1, num_classes=151)[:, :, :, 1:].sum(dim=[1, 2]).float()
 
         # Get some statistics
         class_mask = class_count_per_batch > 0
