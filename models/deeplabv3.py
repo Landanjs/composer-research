@@ -252,27 +252,28 @@ class ComposerDeepLabV3(ComposerModel):
             dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
                 outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            mask = (one_hot_targets[:, 1:].sum(dim=[2, 3]) != 0)
+            target_class_counts = one_hot_targets[:, 1:].sum(dim=[2, 3])
+            mask = (target_class_counts != 0)
             #c_present, _ = torch.unique(target, return_counts=True)
             #c_present = c_present[c_present != -1]  # remove background class
             #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
             #mask[c_present] = True
             weights = torch.zeros_like(dice_loss)
             weights[mask] = 1
-            weights[~mask] = 0
             # Weight sum along classes (leaving only batch dimension)
             #weights_sum = mask.float().sum(dim=1, keepdim=True)
             #weights[weights_sum.view(-1) > 0] /= weights_sum[
             #    weights_sum.view(-1) > 0]
             #print(weights_sum)
             # Weight sum across samples (leaving only classes)
-            weights_sum = mask.float().sum(dim=0, keepdim=True)
-            weights[:, weights_sum.view(-1) > 0] /= weights_sum[:,
-                                                                weights_sum.
-                                                                view(-1) > 0]
-            print(weights_sum)
-            weights /= (weights_sum > 0).sum()
-            print((weights_sum > 0).sum())
+            epsilon = 1e-5
+            weights *= target_class_counts / (target_class_counts.sum(dim=0, keepdim=True) + epsilon)
+            num_classes_in_batch = (mask.float().sum(dim=0, keepdim=True) > 0).sum()
+            #weights[:, weights_sum.view(-1) > 0] &= weights_sum[:, weights_sum.view(-1) > 0]
+            print(weights, num_classes_in_batch)
+            weights /= num_classes_in_batch
+            #weights /= (weights.sumd > 0).sum()
+            #print((weights_sum > 0).sum())
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
