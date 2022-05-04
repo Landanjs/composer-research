@@ -241,7 +241,8 @@ class ComposerDeepLabV3(ComposerModel):
                                                                               batch_class_mask]
             loss = class_loss.sum(dim=0).mean()
         else:
-            class_loss /= num_classes_per_batch
+            mask = num_classes_per_batch.view(-1) > 0
+            class_loss = class_loss[mask] / num_classes_per_batch[mask]
             loss = class_loss.sum(dim=1).mean()
 
         return loss
