@@ -249,7 +249,7 @@ class ComposerDeepLabV3(ComposerModel):
             weights = alpha * (1 / class_count_per_batch.sum(
                 dim=1, keepdim=True)) + (1 - alpha) * (1 / weights)
 
-            class_loss = class_loss / (weights + epsilon)
+            class_loss = class_loss * (weights + epsilon)
             loss = class_loss.sum(dim=1).mean()
 
         return loss
