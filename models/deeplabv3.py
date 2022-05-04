@@ -233,17 +233,23 @@ class ComposerDeepLabV3(ComposerModel):
 
         is_batchwise = False
         epsilon = 1e-5
-        class_loss *= (class_count_per_batch /
-                       class_count_per_batch.sum(dim=1, keepdim=True))
+
         if is_batchwise:
+            class_loss /= (class_count_per_batch + epsilon)
             batch_class_mask = num_samples_per_class.view(-1) > 0
             class_loss = class_loss[:,
                                     batch_class_mask] / num_samples_per_class[:,
                                                                               batch_class_mask]
             loss = class_loss.sum(dim=0).mean()
         else:
-            #mask = num_classes_per_batch.view(-1) > 0
-            #class_loss = class_loss[mask] / num_classes_per_batch[mask]
+            mask = num_classes_per_batch.view(-1) > 0
+            weights = class_count_per_batch
+            weights[mask] *= num_classes_per_batch[mask]
+            alpha = 0.5
+            weights = alpha * class_count_per_batch.sum(
+                dim=1, keepdim=True) + (1 - alpha) * weights
+
+            class_loss = class_loss / (weights + epsilon)
             loss = class_loss.sum(dim=1).mean()
 
         return loss
