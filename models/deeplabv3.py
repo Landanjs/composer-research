@@ -1,25 +1,24 @@
 # Copyright 2021 MosaicML. All Rights Reserved.
 """DeepLabV3 model extending :class:`.ComposerClassifier`."""
 
-import warnings
 import textwrap
-from typing import Any, List, Optional, Union, Callable
+import warnings
+from typing import Any, Callable, List, Optional, Union
 
+import monai
 import torch
-import torch.nn.functional as F
 import torch.distributed as dist
-from torch.nn.modules.loss import _Loss
-from torchmetrics import MetricCollection
-from torchvision.models import _utils, resnet
-
+import torch.nn.functional as F
 from composer.core.types import BatchPair
 from composer.loss import soft_cross_entropy
 from composer.metrics import CrossEntropy, MIoU
 from composer.models.base import ComposerModel
 from composer.models.initializers import Initializer
-import monai
-from monai.utils import LossReduction
 from monai.networks.utils import one_hot
+from monai.utils import LossReduction
+from torch.nn.modules.loss import _Loss
+from torchmetrics import MetricCollection
+from torchvision.models import _utils, resnet
 
 __all__ = ["deeplabv3_builder", "ComposerDeepLabV3"]
 
@@ -99,7 +98,8 @@ def deeplabv3_builder(num_classes: int,
                                               return_layers=return_layers)
 
     try:
-        from mmseg.models import ASPPHead, DepthwiseSeparableASPPHead  # type: ignore
+        from mmseg.models import ASPPHead  # type: ignore
+        from mmseg.models import DepthwiseSeparableASPPHead
     except ImportError as e:
         raise ImportError(
             textwrap.dedent("""\
@@ -267,12 +267,15 @@ class ComposerDeepLabV3(ComposerModel):
             #print(weights_sum)
             # Weight sum across samples (leaving only classes)
             epsilon = 1e-5
-            target_class_counts = batch_target_class_counts.sum(dim=0, keepdim=True)
+            target_class_counts = batch_target_class_counts.sum(dim=0,
+                                                                keepdim=True)
             dist.all_reduce(target_class_counts)
-            weights *= batch_target_class_counts / (target_class_counts + epsilon)
-            num_classes_in_batch = ((target_class_counts != 0).float().sum(dim=0, keepdim=True) > 0).sum()
+            weights *= batch_target_class_counts / (target_class_counts +
+                                                    epsilon)
+            num_classes_in_batch = ((target_class_counts != 0).float().sum(
+                dim=0, keepdim=True) > 0).sum()
             #weights[:, weights_sum.view(-1) > 0] &= weights_sum[:, weights_sum.view(-1) > 0]
-            print(weights, num_classes_in_batch)
+            #print(weights.sum(dim=0), num_classes_in_batch)
             weights /= num_classes_in_batch
             #weights /= (weights.sumd > 0).sum()
             #print((weights_sum > 0).sum())

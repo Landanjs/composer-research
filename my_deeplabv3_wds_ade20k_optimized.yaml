@@ -6,7 +6,7 @@ train_dataset:
     final_size: 512
     drop_last: true
     shuffle: true
-    ignore_background: false
+    ignore_background: true
 val_dataset:
   wds_ade20k:
     remote: s3://mosaicml-internal-dataset-ade20k-3
@@ -15,10 +15,10 @@ val_dataset:
     final_size: 512
     drop_last: false
     shuffle: false
-    ignore_background: false
+    ignore_background: true
 optimizer:
   decoupled_sgdw:
-    lr: 0.01
+    lr: 0.02
     momentum: 0.9
     weight_decay: 2.0e-5
     dampening: 0
@@ -31,12 +31,21 @@ model:
     initializers:
       - kaiming_normal
       - bn_ones
-    num_classes: 151
+    num_classes: 150
     backbone_arch: resnet101
     is_backbone_pretrained: true
     backbone_url: https://download.pytorch.org/models/resnet101-cd907fc2.pth
     use_plus: true
     sync_bn: true
+    pixelwise_loss: ce
+    gamma: 1.0
+    lambda_dice: 0.75
+    lambda_focal: 0.25
+    sigmoid: false
+    softmax: true
+    jaccard: false
+    squared_pred: false
+    batch: true
 max_duration: 128ep
 train_batch_size: 32
 eval_batch_size: 32
@@ -56,7 +65,7 @@ dist_timeout: 60
 loggers:
   wandb:
     flatten_config: false
-    group: bce_loss_w_bg
+    group: batch_weighted_all
     log_artifacts: false
     rank_zero_only: true
 
