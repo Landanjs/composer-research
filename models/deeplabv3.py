@@ -252,8 +252,8 @@ class ComposerDeepLabV3(ComposerModel):
             dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
                 outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            target_class_counts = one_hot_targets[:, 1:].sum(dim=[2, 3])
-            mask = (target_class_counts != 0)
+            batch_target_class_counts = one_hot_targets[:, 1:].sum(dim=[2, 3])
+            mask = (batch_target_class_counts != 0)
             #c_present, _ = torch.unique(target, return_counts=True)
             #c_present = c_present[c_present != -1]  # remove background class
             #mask = torch.zeros(len(dice_loss), dtype=torch.bool)
@@ -267,8 +267,10 @@ class ComposerDeepLabV3(ComposerModel):
             #print(weights_sum)
             # Weight sum across samples (leaving only classes)
             epsilon = 1e-5
-            weights *= target_class_counts / (target_class_counts.sum(dim=0, keepdim=True) + epsilon)
-            num_classes_in_batch = (mask.float().sum(dim=0, keepdim=True) > 0).sum()
+            target_class_counts = batch_target_class_counts.sum(dim=0, keepdim=True)
+            dist.all_reduce(target_class_counts)
+            weights *= batch_target_class_counts / (target_class_counts + epsilon)
+            num_classes_in_batch = ((target_class_counts != 0).float().sum(dim=0, keepdim=True) > 0).sum()
             #weights[:, weights_sum.view(-1) > 0] &= weights_sum[:, weights_sum.view(-1) > 0]
             print(weights, num_classes_in_batch)
             weights /= num_classes_in_batch
