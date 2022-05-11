@@ -434,7 +434,7 @@ class DiceLoss(_Loss):
                 # if skipping background, removing first channel
                 background_mask = target[:, 0:1]
                 target = target[:, 1:]
-                input = input[:, 1:]
+                #input = input[:, 1:]
 
         if target.shape != input.shape:
             raise AssertionError(
