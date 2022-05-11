@@ -484,4 +484,4 @@ class DiceLoss(_Loss):
                 f'Unsupported reduction: {self.reduction}, available options are ["mean", "sum", "none"].'
             )
 
-        return f, ground_o
+        return f
