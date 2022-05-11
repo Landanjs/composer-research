@@ -276,7 +276,7 @@ class ComposerDeepLabV3(ComposerModel):
 
             #print(weights, num_classes_in_batch)
 
-            loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
+            loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
