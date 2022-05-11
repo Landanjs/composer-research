@@ -274,7 +274,7 @@ class ComposerDeepLabV3(ComposerModel):
             num_classes_in_batch = (total_class_counts != 0).float().sum() # scalar
             weights /= (num_classes_in_batch + epsilon)
 
-            #print(weights, num_classes_in_batch)
+            print(weights, num_classes_in_batch)
 
             loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
