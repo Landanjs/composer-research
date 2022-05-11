@@ -1,25 +1,24 @@
 # Copyright 2021 MosaicML. All Rights Reserved.
 """DeepLabV3 model extending :class:`.ComposerClassifier`."""
 
-import warnings
 import textwrap
-from typing import Any, List, Optional, Union, Callable
+import warnings
+from typing import Any, Callable, List, Optional, Union
 
+import monai
 import torch
-import torch.nn.functional as F
 import torch.distributed as dist
-from torch.nn.modules.loss import _Loss
-from torchmetrics import MetricCollection
-from torchvision.models import _utils, resnet
-
+import torch.nn.functional as F
 from composer.core.types import BatchPair
 from composer.loss import soft_cross_entropy
 from composer.metrics import CrossEntropy, MIoU
 from composer.models.base import ComposerModel
 from composer.models.initializers import Initializer
-import monai
-from monai.utils import LossReduction
 from monai.networks.utils import one_hot
+from monai.utils import LossReduction
+from torch.nn.modules.loss import _Loss
+from torchmetrics import MetricCollection
+from torchvision.models import _utils, resnet
 
 __all__ = ["deeplabv3_builder", "ComposerDeepLabV3"]
 
@@ -99,7 +98,8 @@ def deeplabv3_builder(num_classes: int,
                                               return_layers=return_layers)
 
     try:
-        from mmseg.models import ASPPHead, DepthwiseSeparableASPPHead  # type: ignore
+        from mmseg.models import ASPPHead  # type: ignore
+        from mmseg.models import DepthwiseSeparableASPPHead
     except ImportError as e:
         raise ImportError(
             textwrap.dedent("""\
