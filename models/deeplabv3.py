@@ -224,14 +224,14 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
         self.gamma = gamma
-        self.dice_loss = monai.losses.DiceLoss(include_background=True,
-                                               to_onehot_y=False,
-                                               sigmoid=sigmoid,
-                                               softmax=softmax,
-                                               jaccard=jaccard,
-                                               batch=False,
-                                               squared_pred=squared_pred,
-                                               reduction='none')
+        self.dice_loss = DiceLoss(include_background=False,
+                                  to_onehot_y=False,
+                                  sigmoid=sigmoid,
+                                  softmax=softmax,
+                                  jaccard=jaccard,
+                                  batch=False,
+                                  squared_pred=squared_pred,
+                                  reduction='none')
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
@@ -249,7 +249,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
+            dice_loss = self.dice_loss(outputs, one_hot_targets).view(
                 outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             class_counts = one_hot_targets[:, 1:].sum(dim=[2, 3]) # B x C
@@ -432,6 +432,7 @@ class DiceLoss(_Loss):
                 )
             else:
                 # if skipping background, removing first channel
+                background_mask = target[:, 0:1]
                 target = target[:, 1:]
                 input = input[:, 1:]
 
@@ -452,19 +453,19 @@ class DiceLoss(_Loss):
             target = torch.pow(target, 2)
             input = torch.pow(input, 2)
 
-        ground_o = torch.sum(target, dim=reduce_axis)
-        pred_o = torch.sum(input, dim=reduce_axis)
-        dist.all_reduce(ground_o)
-        dist.all_reduce(pred_o)
+        if not self.include_background:
+            ground_o = torch.sum(target * ~background_mask, dim=reduce_axis)
+            pred_o = torch.sum(input * ~background_mask, dim=reduce_axis)
+        else:
+            ground_o = torch.sum(target, dim=reduce_axis)
+            pred_o = torch.sum(input, dim=reduce_axis)
+
+
 
         denominator = ground_o + pred_o
 
         if self.jaccard:
             denominator = 2.0 * (denominator - intersection)
-
-        if self.batch:
-            dist.all_reduce(intersection)
-            #dist.all_reduce(denominator)
 
         f: torch.Tensor = 1.0 - (2.0 * intersection + self.smooth_nr) / (
             denominator + self.smooth_dr)
