@@ -432,7 +432,7 @@ class DiceLoss(_Loss):
                 )
             else:
                 # if skipping background, removing first channel
-                background_mask = target[:, 0:1]
+                not_background_mask = (target[:, 0:1] == 0).float()
                 target = target[:, 1:]
                 #input = input[:, 1:]
 
@@ -454,8 +454,8 @@ class DiceLoss(_Loss):
             input = torch.pow(input, 2)
 
         if not self.include_background:
-            ground_o = torch.sum(target * ~background_mask, dim=reduce_axis)
-            pred_o = torch.sum(input * ~background_mask, dim=reduce_axis)
+            ground_o = torch.sum(target * not_background_mask, dim=reduce_axis)
+            pred_o = torch.sum(input * not_background_mask, dim=reduce_axis)
         else:
             ground_o = torch.sum(target, dim=reduce_axis)
             pred_o = torch.sum(input, dim=reduce_axis)
