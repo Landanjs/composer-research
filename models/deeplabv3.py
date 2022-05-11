@@ -269,7 +269,9 @@ class ComposerDeepLabV3(ComposerModel):
             weights *= class_counts / (total_class_counts + epsilon)
 
             # Weights by the number of classes in each sample
-            num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
+            #num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
+            # Weights by the number of classes in the whole batch
+            num_classes_in_batch = (total_class_counts != 0).float().sum() # scalar
             weights /= (num_classes_in_batch + epsilon)
 
             #print(weights, num_classes_in_batch)
