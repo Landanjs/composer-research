@@ -272,7 +272,7 @@ class ComposerDeepLabV3(ComposerModel):
             num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
             weights /= (num_classes_in_batch + epsilon)
 
-            print(weights, num_classes_in_batch)
+            #print(weights, num_classes_in_batch)
 
             loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
         if self.lambda_focal:
