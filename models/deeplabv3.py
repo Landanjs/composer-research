@@ -9,7 +9,6 @@ import monai
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from composer.core.types import BatchPair
 from composer.loss import soft_cross_entropy
 from composer.metrics import CrossEntropy, MIoU
 from composer.models.base import ComposerModel
@@ -238,12 +237,12 @@ class ComposerDeepLabV3(ComposerModel):
                                                  weight=focal_weight,
                                                  reduction="none")
 
-    def forward(self, batch: BatchPair):
+    def forward(self, batch):
         x = batch[0]
         logits = self.model(x)
         return logits
 
-    def loss(self, outputs: Any, batch: BatchPair):
+    def loss(self, outputs: Any, batch):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
@@ -300,7 +299,7 @@ class ComposerDeepLabV3(ComposerModel):
                        ] if train else [self.val_miou, self.val_ce]
         return MetricCollection(metric_list)
 
-    def validate(self, batch: BatchPair):
+    def validate(self, batch):
         assert self.training is False, "For validation, model must be in eval mode"
         target = batch[1]
         logits = self.forward(batch)
