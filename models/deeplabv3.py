@@ -224,7 +224,7 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_focal = lambda_focal
         self.gamma = gamma
         self.is_batch = batch
-        self.dice_loss = DiceLoss(include_background=False,
+        self.dice_loss = monai.losses.DiceLoss(include_background=False,
                                   to_onehot_y=False,
                                   sigmoid=sigmoid,
                                   softmax=softmax,
@@ -249,7 +249,7 @@ class ComposerDeepLabV3(ComposerModel):
         if self.lambda_dice:
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets).view(
+            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
                 1 if self.is_batch else outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             reduce_dims = [0, 2, 3] if self.is_batch else [2, 3]
