@@ -250,7 +250,7 @@ class ComposerDeepLabV3(ComposerModel):
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
             dice_loss = self.dice_loss(outputs, one_hot_targets).view(
-                outputs.shape[0], -1)
+                1 if self.is_batch else outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             class_counts = one_hot_targets[:, 1:].sum(dim=[2, 3]) # B x C
             present_class_mask = (class_counts != 0) # B x C
