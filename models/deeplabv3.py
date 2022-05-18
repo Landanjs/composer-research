@@ -223,12 +223,13 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_dice = lambda_dice
         self.lambda_focal = lambda_focal
         self.gamma = gamma
+        self.is_batch = batch
         self.dice_loss = DiceLoss(include_background=False,
                                   to_onehot_y=False,
                                   sigmoid=sigmoid,
                                   softmax=softmax,
                                   jaccard=jaccard,
-                                  batch=False,
+                                  batch=batch,
                                   squared_pred=squared_pred,
                                   reduction='none')
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
@@ -255,27 +256,31 @@ class ComposerDeepLabV3(ComposerModel):
             present_class_mask = (class_counts != 0) # B x C
 
             # Start present classes with a weight of 1
-            weights = torch.zeros_like(dice_loss) # B x C
+            weights = torch.zeros_like(dice_loss) # B x C or 1 (?) x C
             weights[present_class_mask] = 1
 
             epsilon = 1e-5
 
             # Get the total number of pixels for each class across devices
             total_class_counts = class_counts.sum(dim=0, keepdim=True) # 1 x C
-            dist.all_reduce(total_class_counts)
+            if not self.is_batch:
+                dist.all_reduce(total_class_counts)
 
-            # Scale weight of each object by the its proportion of total class area
-            weights *= class_counts / (total_class_counts + epsilon)
+                # Scale weight of each object by the its proportion of total class area
+                weights *= class_counts / (total_class_counts + epsilon)
 
-            # Weights by the number of classes in each sample
-            #num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
             # Weights by the number of classes in the whole batch
             num_classes_in_batch = (total_class_counts != 0).float().sum() # scalar
+
+            # Weights by the number of classes in each sample -> did not seem to work well!
+            # num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
+
             weights /= (num_classes_in_batch + epsilon)
 
-            #print(weights, num_classes_in_batch)
-
-            loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
+            if not self.is_batch:
+                loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
+            else:
+                loss += (dice_loss * weights).sum() * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
