@@ -224,7 +224,7 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_focal = lambda_focal
         self.gamma = gamma
         self.is_batch = batch
-        self.dice_loss = monai.losses.DiceLoss(include_background=False,
+        self.dice_loss = monai.losses.DiceLoss(include_background=True,
                                   to_onehot_y=False,
                                   sigmoid=sigmoid,
                                   softmax=softmax,
