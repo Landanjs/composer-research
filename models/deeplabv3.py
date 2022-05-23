@@ -224,14 +224,13 @@ class ComposerDeepLabV3(ComposerModel):
         self.lambda_focal = lambda_focal
         self.gamma = gamma
         self.is_batch = batch
-        self.dice_loss = DiceLoss(include_background=False,
+        self.dice_loss = DiceLoss(include_background=True,
                                   to_onehot_y=False,
                                   sigmoid=sigmoid,
                                   softmax=softmax,
                                   jaccard=jaccard,
                                   batch=batch,
-                                  squared_pred=squared_pred,
-                                  reduction='none')
+                                  squared_pred=squared_pred)
         self.focal_loss = monai.losses.FocalLoss(include_background=True,
                                                  to_onehot_y=True,
                                                  gamma=gamma,
@@ -247,41 +246,42 @@ class ComposerDeepLabV3(ComposerModel):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
+            if target.ndim <
             one_hot_targets = monai.networks.utils.one_hot(
                 (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets).view(
+            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
                 1 if self.is_batch else outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
-            reduce_dims = [0, 2, 3] if self.is_batch else [2, 3]
-            class_counts = one_hot_targets[:, 1:].sum(dim=reduce_dims).unsqueeze(0) # B x C or 1 x C
-            present_class_mask = (class_counts != 0) # B x C or 1 x C
+            #reduce_dims = [0, 2, 3] if self.is_batch else [2, 3]
+            #class_counts = one_hot_targets[:, 1:].sum(dim=reduce_dims).unsqueeze(0) # B x C or 1 x C
+            #present_class_mask = (class_counts != 0) # B x C or 1 x C
 
             # Start present classes with a weight of 1
-            weights = torch.zeros_like(dice_loss) # B x C or 1 (?) x C
-            weights[present_class_mask] = 1
+            #weights = torch.zeros_like(dice_loss) # B x C or 1 (?) x C
+            #weights[present_class_mask] = 1
 
-            epsilon = 1e-5
+            #epsilon = 1e-5
 
             # Get the total number of pixels for each class across devices
-            total_class_counts = class_counts.sum(dim=0, keepdim=True) # 1 x C
-            if not self.is_batch:
-                dist.all_reduce(total_class_counts)
+            #total_class_counts = class_counts.sum(dim=0, keepdim=True) # 1 x C
+            #if not self.is_batch:
+            #    dist.all_reduce(total_class_counts)
 
                 # Scale weight of each object by the its proportion of total class area
-                weights *= class_counts / (total_class_counts + epsilon)
+            #    weights *= class_counts / (total_class_counts + epsilon)
 
             # Weights by the number of classes in the whole batch
-            num_classes_in_batch = (total_class_counts != 0).float().sum() # scalar
+            #num_classes_in_batch = (total_class_counts != 0).float().sum() # scalar
 
             # Weights by the number of classes in each sample -> did not seem to work well!
             # num_classes_in_batch = present_class_mask.float().sum(dim=1, keepdim=True) # B x 1
 
-            weights /= (num_classes_in_batch + epsilon)
+            #weights /= (num_classes_in_batch + epsilon)
 
-            if not self.is_batch:
-                loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
-            else:
-                loss += (dice_loss * weights).sum() * self.lambda_dice
+            #if not self.is_batch:
+            #    loss += (dice_loss * weights).sum(dim=1).mean() * self.lambda_dice
+            #else:
+            loss += dice_loss * self.lambda_dice
         if self.lambda_focal:
             if self.pixelwise_loss == 'ce':
                 ce_loss = soft_cross_entropy(outputs, target, ignore_index=-1)
@@ -437,9 +437,8 @@ class DiceLoss(_Loss):
                 )
             else:
                 # if skipping background, removing first channel
-                not_background_mask = (target[:, 0:1] == 0).float()
                 target = target[:, 1:]
-                #input = input[:, 1:]
+                input = input[:, 1:]
 
         if target.shape != input.shape:
             raise AssertionError(
@@ -458,14 +457,14 @@ class DiceLoss(_Loss):
             target = torch.pow(target, 2)
             input = torch.pow(input, 2)
 
-        if not self.include_background:
-            ground_o = torch.sum(target * not_background_mask, dim=reduce_axis)
-            pred_o = torch.sum(input * not_background_mask, dim=reduce_axis)
-        else:
-            ground_o = torch.sum(target, dim=reduce_axis)
-            pred_o = torch.sum(input, dim=reduce_axis)
+        ground_o = torch.sum(target, dim=reduce_axis)
+        pred_o = torch.sum(input, dim=reduce_axis)
 
-
+        sync_dice = True
+        if sync_dice:
+            dist.all_reduce(intersection)
+            dist.all_reduce(ground_o)
+            dist.all_reduce(pred_o)
 
         denominator = ground_o + pred_o
 
@@ -476,7 +475,9 @@ class DiceLoss(_Loss):
             denominator + self.smooth_dr)
 
         if self.reduction == LossReduction.MEAN.value:
-            f = torch.mean(f)  # the batch and channel average
+            #f = torch.mean(f)  # the batch and channel average
+            f = torch.mean(f[ground_o > 0])
+
         elif self.reduction == LossReduction.SUM.value:
             f = torch.sum(f)  # sum over the batch and channel dims
         elif self.reduction == LossReduction.NONE.value:
