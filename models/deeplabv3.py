@@ -246,10 +246,12 @@ class ComposerDeepLabV3(ComposerModel):
         target = batch[1]
         loss = 0
         if self.lambda_dice:
-            if target.ndim <
-            one_hot_targets = monai.networks.utils.one_hot(
-                (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))
-            dice_loss = self.dice_loss(outputs, one_hot_targets[:, 1:]).view(
+            if target.ndim < outputs.ndim:
+                one_hot_targets = monai.networks.utils.one_hot(
+                    (target + 1).unsqueeze(1), num_classes=(outputs.shape[1] + 1))[:, 1:]
+            else:
+                one_hot_targets = target
+            dice_loss = self.dice_loss(outputs, one_hot_targets).view(
                 1 if self.is_batch else outputs.shape[0], -1)
             dice_loss = dice_loss.pow(1 / self.gamma)
             #reduce_dims = [0, 2, 3] if self.is_batch else [2, 3]
