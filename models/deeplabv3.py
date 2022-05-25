@@ -463,7 +463,7 @@ class DiceLoss(_Loss):
 
         sync_dice = True
         if sync_dice:
-            #dist.all_reduce(intersection)
+            dist.all_reduce(intersection)
             dist.all_reduce(ground_o)
             dist.all_reduce(pred_o)
 
