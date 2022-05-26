@@ -461,7 +461,7 @@ class DiceLoss(_Loss):
         ground_o = torch.sum(target, dim=reduce_axis)
         pred_o = torch.sum(input, dim=reduce_axis)
 
-        sync_dice = True
+        sync_dice = False
         if sync_dice:
             dist.all_reduce(intersection)
             dist.all_reduce(ground_o)
